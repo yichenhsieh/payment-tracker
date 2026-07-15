@@ -151,7 +151,7 @@
         // === 🚀 標準化複製金鑰設定區 ===
         const SUPABASE_URL = "https://yqyjngpsgdewanppclep.supabase.co";
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlxeWpuZ3BzZ2Rld2FucHBjbGVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMzMDIwODgsImV4cCI6MjA5ODg3ODA4OH0.CRigzLH0Qr8n-gpuJ_6v42BRM1SEXFPKX87GnPSM9BE";
-        const supabase = typeof Supabase !== 'undefined' ? Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+        const supabase = (window.supabase && typeof window.supabase.createClient === 'function') ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
         // 初始化：預設載入一行品名明細
         window.onload = function () {
@@ -199,6 +199,25 @@
                 <button type="button" onclick="this.parentElement.remove()" class="tab-btn text-xs text-rose-400 hover:text-rose-300 px-1">✕</button>
             `;
             container.appendChild(div);
+        }
+
+        function switchTab(tab) {
+            const formSection = document.getElementById('formSection');
+            const searchSection = document.getElementById('searchSection');
+            const tabFormBtn = document.getElementById('tabFormBtn');
+            const tabSearchBtn = document.getElementById('tabSearchBtn');
+
+            if (tab === 'search') {
+                formSection.classList.add('hidden');
+                searchSection.classList.remove('hidden');
+                tabFormBtn.className = "tab-btn flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all text-center text-slate-400 hover:text-slate-200";
+                tabSearchBtn.className = "tab-btn flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all text-center bg-indigo-600 text-white shadow-md";
+            } else {
+                formSection.classList.remove('hidden');
+                searchSection.classList.add('hidden');
+                tabFormBtn.className = "tab-btn flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all text-center bg-indigo-600 text-white shadow-md";
+                tabSearchBtn.className = "tab-btn flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all text-center text-slate-400 hover:text-slate-200";
+            }
         }
 
         async function handleSubmit(event) {
