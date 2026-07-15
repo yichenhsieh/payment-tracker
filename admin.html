@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>費用請款系統 - 管理員後台</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body class="bg-slate-900 min-h-screen text-slate-100 p-4 md:p-8">
+
+    <div class="max-w-7xl mx-auto">
+        <!-- 頁首 -->
+        <div
+            class="flex flex-col md:flex-row md:justify-between md:items-center border-b border-slate-700 pb-5 mb-8 gap-4">
+            <div>
+                <h1 class="text-3xl font-bold text-white tracking-wide">費用請款審核後台</h1>
+                <p class="text-sm text-slate-400 mt-1">會計與出納專用：核銷單據、變更狀態與查看憑證實體檔案。</p>
+            </div>
+            <button onclick="fetchData()"
+                class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-sm font-semibold shadow-md transition-all cursor-pointer text-center">
+                🔄 重新整理資料
+            </button>
+        </div>
+
+        <!-- 數據表格區外殼 -->
+        <div class="bg-slate-800 rounded-2xl shadow-2xl border border-slate-700 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-slate-700 text-sm text-left">
+                    <thead class="bg-slate-700/50 text-slate-300 font-medium uppercase tracking-wider">
+                        <tr>
+                            <th class="px-4 py-3.5">單號 / 時間</th>
+                            <th class="px-4 py-3.5">申請與付款人</th>
+                            <th class="px-4 py-3.5">品名說明與憑證</th>
+                            <th class="px-4 py-3.5">發票 / 請款金額</th>
+                            <th class="px-4 py-3.5">會計審核 / 科目</th>
+                            <th class="px-4 py-3.5">出納核銷 / 領款</th>
+                            <th class="px-4 py-3.5">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="masterTableBody" class="divide-y divide-slate-700 bg-slate-800 text-slate-300">
+                        <!-- 資料由 JS 動態渲染至此 -->
+                    </tbody>
+                </table>
+            </div>
+            <div id="loadingText" class="p-8 text-center text-slate-400 font-medium">資料載入中...</div>
+        </div>
+    </div>
+
+    <script>
+        // === 🚀 標準化複製設定區 ===
+        const SUPABASE_URL = "YOUR_SUPABASE_URL";
+        const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+        const supabase = typeof Supabase !== 'undefined' ? Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+
+        // 頁面開啟自動抓取資料
+        window.onload = function () {
+            fetchData();
+        };
+
+        // 1. 撈取資料 (包含主檔與關聯的明細項目)
+        async function fetchData() {
+            if (!supabase) return alert('請先填入 Supabase 金鑰設定！');
+            document.getElementById('loadingText').style.display = 'block';
+
+            // 使用 PostgreSQL 的 Left Join 語法，一次把主檔和明細全部撈出來
+            const { data, error } = await supabase
+                .from('reimbursement_masters')
+                .select(`
+                    *,
+                    reimbursement_details ( item_description )
+                `)
+                .order('id', { ascending: false });
+
+            document.getElementById('loadingText').style.display = 'none';
+
+            if (error) {
+                alert('資料撈取失敗：' + error.message);
+                return;
+            }
+
+            renderTable(data);
+        }
+
+        // 2. 渲染表格資料
+        function renderTable(data) {
+            const tbody = document.getElementById('masterTableBody');
+            tbody.innerHTML = '';
+
+            if (data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-slate-500">目前暫無請款單據。</td></tr>`;
+                return;
+            }
+
+            data.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-700/30 transition-colors";
+
+                // 串接一對多的品名項目說明
+                const detailsHtml = row.reimbursement_details.map(d => `• ${d.item_description}`).join('<br>');
+                const formattedDate = new Date(row.created_at).toLocaleString('zh-TW', { hour12: false });
+
+                tr.innerHTML = `
+                    <!-- 單號 / 時間 -->
+                    <td class="px-4 py-4">
+                        <div class="font-bold text-indigo-400">${row.form_no}</div>
+                        <div class="text-xs text-slate-400 mt-1">${formattedDate}</div>
+                        <div class="text-xs text-slate-400">${row.email}</div>
+                    </td>
+                    <!-- 申請與付款人 -->
+                    <td class="px-4 py-4">
+                        <div class="font-medium text-white">申請：${row.applicant}</div>
+                        <div class="text-xs text-amber-400 mt-1">補償給：${row.payee_name}</div>
+                    </td>
+                    <!-- 品名說明與憑證 -->
+                    <td class="px-4 py-4 max-w-xs">
+                        <div class="text-xs text-slate-200 line-clamp-3">${detailsHtml}</div>
+                        <div class="mt-2 text-xs">
+                            <span class="text-slate-400">種類: ${row.receipt_type}</span> | 
+                            <span class="text-slate-400">編號: ${row.invoice_no || '無'}</span>
+                        </div>
+                        <div class="mt-1">
+                            <a href="${row.file_url}" target="_blank" class="text-emerald-400 hover:underline text-xs font-semibold inline-flex items-center">📂 查看實體發票照片</a>
+                        </div>
+                    </td>
+                    <!-- 金額 -->
+                    <td class="px-4 py-4 font-mono text-right">
+                        <div class="text-slate-400 text-xs">發票: NT$ ${parseFloat(row.invoice_total).toLocaleString()}</div>
+                        <div class="text-white font-bold mt-1">請款: NT$ ${parseFloat(row.reimbursement_total).toLocaleString()}</div>
+                    </td>
+                    <!-- 會計審核欄位 -->
+                    <td class="px-4 py-4 space-y-2">
+                        <div>
+                            <select onchange="updateField(${row.id}, 'accounting_review', this.value)" class="bg-slate-700 text-xs rounded px-2 py-1 border border-slate-600 text-white focus:outline-none">
+                                <option value="未審核" ${row.accounting_review === '未審核' ? 'selected' : ''}>⏳ 未審核</option>
+                                <option value="審核通過" ${row.accounting_review === '審核通過' ? 'selected' : ''}>✅ 審核通過</option>
+                                <option value="退回修正" ${row.accounting_review === '退回修正' ? 'selected' : ''}>❌ 退回修正</option>
+                            </select>
+                        </div>
+                        <input type="text" value="${row.account_category || ''}" placeholder="填入科目名稱" 
+                               onblur="updateField(${row.id}, 'account_category', this.value)"
+                               class="bg-slate-700 text-xs rounded px-2 py-1 border border-slate-600 text-white w-28 focus:outline-none placeholder-slate-500">
+                    </td>
+                    <!-- 出納核銷欄位 -->
+                    <td class="px-4 py-4 space-y-2 text-xs">
+                        <label class="flex items-center gap-1.5 cursor-pointer">
+                            <input type="checkbox" ${row.invoice_received ? 'checked' : ''} 
+                                   onchange="updateField(${row.id}, 'invoice_received', this.checked)"
+                                   class="rounded border-slate-600 text-indigo-600 focus:ring-0 bg-slate-700">
+                            <span>發票已收到</span>
+                        </label>
+                        <label class="flex items-center gap-1.5 cursor-pointer">
+                            <input type="checkbox" ${row.payout_confirmed ? 'checked' : ''} 
+                                   onchange="handlePayoutToggle(${row.id}, this.checked)"
+                                   class="rounded border-slate-600 text-emerald-600 focus:ring-0 bg-slate-700">
+                            <span class="${row.payout_confirmed ? 'text-emerald-400 font-bold' : ''}">領款確認</span>
+                        </label>
+                        <div class="text-[10px] text-slate-400">
+                            ${row.payout_confirmed_at ? '時間: ' + new Date(row.payout_confirmed_at).toLocaleString('zh-TW') : '狀態: 尚未領款'}
+                        </div>
+                    </td>
+                    <!-- 總狀態與出納備註 -->
+                    <td class="px-4 py-4 space-y-2">
+                        <select onchange="updateField(${row.id}, 'status', this.value)" class="bg-slate-700 text-xs rounded px-2 py-1 border border-slate-600 text-white font-bold focus:outline-none">
+                            <option value="處理中" ${row.status === '處理中' ? 'selected' : ''}>🟡 處理中</option>
+                            <option value="已發款" ${row.status === '已發款' ? 'selected' : ''}>🟢 已發款</option>
+                            <option value="作廢" ${row.status === '作廢' ? 'selected' : ''}>🔴 作廢</option>
+                        </select>
+                        <input type="text" value="${row.cashier_in_charge || ''}" placeholder="負責出納" 
+                               onblur="updateField(${row.id}, 'cashier_in_charge', this.value)"
+                               class="bg-slate-700 text-xs rounded px-2 py-1 border border-slate-600 text-white w-24 focus:outline-none placeholder-slate-500 block">
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // 3. 通用的即時欄位更新函數 (當會計/出納修改欄位或移開焦點時，直接即時存入 Supabase)
+        async function updateField(id, fieldName, value) {
+            const updateObj = {};
+            updateObj[fieldName] = value;
+
+            const { error } = await supabase
+                .from('reimbursement_masters')
+                .update(updateObj)
+                .eq('id', id);
+
+            if (error) {
+                alert('資料更新失敗：' + error.message);
+            }
+        }
+
+        // 4. 特別處理「領款確認」勾選：當勾選時，自動記錄當下時間戳記
+        async function handlePayoutToggle(id, isChecked) {
+            const updateObj = {
+                payout_confirmed: isChecked,
+                payout_confirmed_at: isChecked ? new Date().toISOString() : null
+            };
+
+            const { error } = await supabase
+                .from('reimbursement_masters')
+                .update(updateObj)
+                .eq('id', id);
+
+            if (error) {
+                alert('領款狀態更新失敗：' + error.message);
+            } else {
+                fetchData(); // 重新整理重新載入時間
+            }
+        }
+    </script>
+</body>
+
+</html>
