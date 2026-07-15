@@ -285,6 +285,12 @@
             }
         }
 
+        // 🟢 核心防護別名：不管呼叫 fetchData 還是 fetchPayments 都能完美運行，防止 ReferenceError 
+        window.fetchData = function() {
+            console.log("Safe alias 'fetchData()' invoked.");
+            fetchPayments();
+        };
+
         // 計算並更新上方四大面板的數據
         function updateStats() {
             const stats = {
@@ -573,6 +579,7 @@
             `;
         }
 
+        // 錯誤彈出框
         function showErrorAlert(msg) {
             Swal.fire({
                 title: '設定有誤',
