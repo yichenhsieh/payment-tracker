@@ -151,7 +151,7 @@
         // === 🚀 標準化複製金鑰設定區 ===
         const SUPABASE_URL = "https://yqyjngpsgdewanppclep.supabase.co";
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlxeWpuZ3BzZ2Rld2FucHBjbGVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMzMDIwODgsImV4cCI6MjA5ODg3ODA4OH0.CRigzLH0Qr8n-gpuJ_6v42BRM1SEXFPKX87GnPSM9BE";
-        const supabase = (window.supabase && typeof window.supabase.createClient === 'function') ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+        const supabaseClient = (window.supabase && typeof window.supabase.createClient === 'function') ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
         // 初始化：預設載入一行品名明細
         window.onload = function () {
@@ -222,7 +222,7 @@
 
         async function handleSubmit(event) {
             event.preventDefault();
-            if (!supabase) return alert('請先填入 Supabase 金鑰設定！');
+            if (!supabaseClient) return alert('請先填入 Supabase 金鑰設定！');
 
             // 抓取主檔欄位
             const applicant = document.getElementById('applicant').value;
@@ -247,17 +247,17 @@
                 const fileExt = file.name.split('.').pop();
                 const fileName = `${formNo}.${fileExt}`;
 
-                const { error: uploadError } = await supabase.storage.from('receipts').upload(fileName, file, { cacheControl: '3600', upsert: false });
+                const { error: uploadError } = await supabaseClient.storage.from('receipts').upload(fileName, file, { cacheControl: '3600', upsert: false });
                 if (uploadError) return alert('發票相片上傳失敗：' + uploadError.message);
 
-                const { data: urlData } = supabase.storage.from('receipts').getPublicUrl(fileName);
+                const { data: urlData } = supabaseClient.storage.from('receipts').getPublicUrl(fileName);
                 finalFileUrl = urlData.publicUrl;
             } else {
                 return alert('請上傳發票憑證！');
             }
 
             // A. 寫入主檔
-            const { data: masterData, error: masterError } = await supabase.from('reimbursement_masters').insert([{
+            const { data: masterData, error: masterError } = await supabaseClient.from('reimbursement_masters').insert([{
                 form_no: formNo, applicant, payee_name: payeeName, email, purchase_date: purchaseDate,
                 receipt_type: receiptType, invoice_no: invoiceNo, invoice_total: invoiceTotal,
                 reimbursement_total: reimbursementTotal, file_url: finalFileUrl
@@ -269,7 +269,7 @@
             const detailRows = document.querySelectorAll('.item-description');
             const detailsToInsert = Array.from(detailRows).map(input => ({ master_id: masterData[0].id, item_description: input.value }));
 
-            const { error: detailError } = await supabase.from('reimbursement_details').insert(detailsToInsert);
+            const { error: detailError } = await supabaseClient.from('reimbursement_details').insert(detailsToInsert);
 
             if (detailError) {
                 alert('明細存入失敗：' + detailError.message);
@@ -292,14 +292,14 @@
             const resultContainer = document.getElementById('resultContainer');
             const infoMessage = document.getElementById('infoMessage');
 
-            if (!supabase) return alert('請先填入 Supabase 金鑰！');
+            if (!supabaseClient) return alert('請先填入 Supabase 金鑰！');
             if (!searchKey) return alert('請輸入查詢關鍵字！');
 
             resultContainer.classList.add('hidden');
             infoMessage.classList.remove('hidden');
             infoMessage.innerText = '雲端檢索中...';
 
-            let query = supabase.from('reimbursement_masters').select('*');
+            let query = supabaseClient.from('reimbursement_masters').select('*');
             if (searchKey.includes('@')) {
                 query = query.eq('email', searchKey).order('id', { ascending: false });
             } else {
