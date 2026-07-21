@@ -10,7 +10,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="bg-gray-100 min-h-screen">
-  <div class="max-w-4xl mx-auto py-8 px-4">
+  <div class="max-w-5xl mx-auto py-8 px-4">
     <h1 class="text-2xl font-bold text-gray-800 mb-6 text-center">團隊請款與憑證報銷系統</h1>
 
     <!-- 頁籤導覽列 (固定區塊，不會因渲染失敗消失) -->
@@ -97,10 +97,11 @@
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">項目說明</th>
               <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">請款金額</th>
               <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">請款狀態</th>
+              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">回覆動作</th>
             </tr>
           </thead>
           <tbody id="historyTableBody" class="bg-white divide-y divide-gray-200 text-sm">
-            <tr><td colspan="5" class="text-center py-4 text-gray-500">資料載入中...</td></tr>
+            <tr><td colspan="6" class="text-center py-4 text-gray-500">資料載入中...</td></tr>
           </tbody>
         </table>
       </div>
@@ -112,7 +113,6 @@
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlxeWpuZ3BzZ2Rld2FucHBjbGVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMzMDIwODgsImV4cCI6MjA5ODg3ODA4OH0.CRigzLH0Qr8n-gpuJ_6v42BRM1SEXFPKX87GnPSM9BE';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // 頁籤切換邏輯
     function switchTab(tabName) {
       const applyTab = document.getElementById('tab-apply');
       const historyTab = document.getElementById('tab-history');
@@ -133,18 +133,48 @@
       }
     }
 
-    // 狀態渲染與顏色標籤
-    function renderStatusBadge(status, reason) {
+    function renderStatusBadge(status, reason, isConfirmed) {
+      if (status === 'paid' && isConfirmed) {
+        return '<span class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">✅ 交易完成(已領款)</span>';
+      }
       const map = {
         'pending_audit': '<span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">待會計審核</span>',
         'pending_payment': '<span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">待出納撥款</span>',
-        'paid': '<span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">已完成撥款</span>',
+        'paid': '<span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">已撥款 (待確認)</span>',
         'rejected': `<span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded" title="退單原因: ${reason || '無'}">已退單</span>`
       };
       return map[status] || `<span class="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded">${status}</span>`;
     }
 
-    // 載入請款紀錄 (包覆 try...catch 防錯)
+    function renderUserAction(item) {
+      if (item.status === 'paid' && !item.is_payee_confirmed) {
+        return `<button onclick="confirmReceived('${item.id}')" class="bg-indigo-600 text-white text-xs px-2 py-1 rounded hover:bg-indigo-700 transition">確認已收到款項</button>`;
+      } else if (item.is_payee_confirmed) {
+        return `<span class="text-xs text-gray-400">已回覆領款 (${new Date(item.payee_confirmed_at).toLocaleDateString()})</span>`;
+      }
+      return `<span class="text-xs text-gray-400">-</span>`;
+    }
+
+    async function confirmReceived(id) {
+      if (!confirm('確認您已收到此筆請款金額？')) return;
+
+      try {
+        const { error } = await supabaseClient
+          .from('receipts')
+          .update({ 
+            is_payee_confirmed: true,
+            payee_confirmed_at: new Date().toISOString()
+          })
+          .eq('id', id);
+
+        if (error) throw error;
+        alert('已成功回覆領款！');
+        loadHistory();
+      } catch (err) {
+        alert(`操作失敗：${err.message}`);
+      }
+    }
+
     async function loadHistory() {
       const tbody = document.getElementById('historyTableBody');
       try {
@@ -156,7 +186,7 @@
         if (error) throw error;
 
         if (!data || data.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-gray-500">目前尚無請款紀錄</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-gray-500">目前尚無請款紀錄</td></tr>';
           return;
         }
 
@@ -166,17 +196,17 @@
             <td class="px-4 py-3">${item.applicant_name}<br><span class="text-xs text-gray-400">收款: ${item.payee_name}</span></td>
             <td class="px-4 py-3 max-w-xs truncate">${item.description}</td>
             <td class="px-4 py-3 text-right font-medium text-gray-900">$${item.claim_amount}</td>
-            <td class="px-4 py-3 text-center whitespace-nowrap">${renderStatusBadge(item.status, item.reject_reason)}</td>
+            <td class="px-4 py-3 text-center whitespace-nowrap">${renderStatusBadge(item.status, item.reject_reason, item.is_payee_confirmed)}</td>
+            <td class="px-4 py-3 text-center whitespace-nowrap">${renderUserAction(item)}</td>
           </tr>
         `).join('');
 
       } catch (err) {
         console.error('載入失敗：', err);
-        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-red-500">載入失敗：${err.message || '請確認 Schema 與網路連線'}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-red-500">載入失敗：${err.message || '請確認 Schema Cache 是否更新'}</td></tr>`;
       }
     }
 
-    // 表單送出處置
     async function handleFormSubmit(e) {
       e.preventDefault();
       const submitBtn = document.getElementById('submitBtn');

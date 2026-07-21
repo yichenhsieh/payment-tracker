@@ -28,7 +28,7 @@
               <th class="px-3 py-3 text-right font-medium text-gray-500">請款金額</th>
               <th class="px-3 py-3 text-center font-medium text-gray-500">發票已收到</th>
               <th class="px-3 py-3 text-left font-medium text-gray-500">會計科目設定</th>
-              <th class="px-3 py-3 text-center font-medium text-gray-500">狀態</th>
+              <th class="px-3 py-3 text-center font-medium text-gray-500">流程狀態</th>
               <th class="px-3 py-3 text-center font-medium text-gray-500">操作動作</th>
             </tr>
           </thead>
@@ -93,7 +93,7 @@
               </select>
             </td>
             <td class="px-3 py-3 text-center">
-              ${getStatusBadge(item.status)}
+              ${getStatusBadge(item)}
             </td>
             <td class="px-3 py-3 text-center space-x-1">
               ${renderActionButtons(item)}
@@ -107,14 +107,21 @@
       }
     }
 
-    function getStatusBadge(status) {
+    function getStatusBadge(item) {
+      if (item.status === 'paid') {
+        if (item.is_payee_confirmed) {
+          return '<span class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">🎉 雙方已結案</span>';
+        } else {
+          return '<span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">已撥款 (待確認)</span>';
+        }
+      }
+      
       const map = {
         'pending_audit': '<span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">待審核</span>',
         'pending_payment': '<span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">待撥款</span>',
-        'paid': '<span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">已撥款</span>',
         'rejected': '<span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded">已退單</span>'
       };
-      return map[status] || status;
+      return map[item.status] || item.status;
     }
 
     function renderActionButtons(item) {
@@ -128,7 +135,7 @@
           <button onclick="confirmPayment('${item.id}')" class="bg-blue-600 text-white text-xs px-2 py-1 rounded hover:bg-blue-700">出納確認撥款</button>
         `;
       } else {
-        return `<span class="text-xs text-gray-400">已結案</span>`;
+        return `<span class="text-xs text-gray-400">流程結束</span>`;
       }
     }
 
