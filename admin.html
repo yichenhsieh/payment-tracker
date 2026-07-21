@@ -14,7 +14,7 @@
         <h1 class="text-2xl font-bold text-gray-800">會計出納審核後台</h1>
         <p class="text-xs text-gray-500 mt-1">獨立控管「會計審核」與「出納撥款」，即時連動申請人領款回覆</p>
       </div>
-      <button onclick="loadAdminData()" class="bg-gray-200 text-gray-700 px-3 py-1.5 rounded hover:bg-gray-300 text-sm font-medium">
+      <button onclick="loadAdminData()" class="bg-gray-200 text-gray-700 px-3 py-1.5 rounded hover:bg-gray-300 text-sm font-medium transition">
         🔄 重新整理
       </button>
     </div>
@@ -87,7 +87,7 @@
                 class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer">
             </td>
             <td class="px-3 py-3">
-              <select onchange="updateSubject('${item.id}', this.value)" class="border rounded text-xs p-1 border-gray-300">
+              <select onchange="updateSubject('${item.id}', this.value)" class="border rounded text-xs p-1 border-gray-300 focus:ring-1 focus:ring-blue-500">
                 <option value="">-- 請選擇 --</option>
                 <option value="差旅費" ${item.accounting_subject === '差旅費' ? 'selected' : ''}>差旅費</option>
                 <option value="文具用品" ${item.accounting_subject === '文具用品' ? 'selected' : ''}>文具用品</option>
@@ -116,7 +116,7 @@
       }
     }
 
-    // 狀態 Badge：包含「申請人確認收訖」狀態
+    // 狀態 Badge 渲染邏輯
     function getStatusBadge(item) {
       if (item.status === 'paid') {
         if (item.is_payee_confirmed) {
@@ -139,8 +139,8 @@
       if (item.status === 'pending_audit') {
         return `
           <div class="flex flex-col gap-1">
-            <button onclick="approveAudit('${item.id}')" class="bg-green-600 text-white text-xs px-2 py-1 rounded hover:bg-green-700">通過審核</button>
-            <button onclick="rejectClaim('${item.id}')" class="bg-red-600 text-white text-xs px-2 py-1 rounded hover:bg-red-700">退單</button>
+            <button onclick="approveAudit('${item.id}')" class="bg-green-600 text-white text-xs px-2 py-1 rounded hover:bg-green-700 transition">審核通過</button>
+            <button onclick="rejectClaim('${item.id}')" class="bg-red-600 text-white text-xs px-2 py-1 rounded hover:bg-red-700 transition">退單</button>
           </div>
         `;
       } else if (item.status === 'rejected') {
@@ -150,31 +150,54 @@
       }
     }
 
-    // 出納專用操作區
+    // 出納專用操作區 (卡關條件：1. 會計已審核 2. 發票已勾選收到)
     function renderCashierActions(item) {
-      if (item.status === 'pending_payment') {
-        return `
-          <button onclick="confirmPayment('${item.id}')" class="bg-blue-600 text-white text-xs px-2 py-1 rounded hover:bg-blue-700 font-medium">確認撥款</button>
-        `;
-      } else if (item.status === 'pending_audit') {
-        return `<span class="text-xs text-gray-400">等待會計審核</span>`;
-      } else if (item.status === 'rejected') {
-        return `<span class="text-xs text-gray-400">-</span>`;
-      } else {
+      if (item.status === 'paid') {
         return `<span class="text-xs text-green-600 font-medium">已完成撥款</span>`;
+      }
+      
+      if (item.status === 'rejected') {
+        return `<span class="text-xs text-gray-400">-</span>`;
+      }
+      
+      if (item.status === 'pending_audit') {
+        return `<span class="text-xs text-amber-700 bg-amber-50 px-2 py-1 rounded border border-amber-200">⏳ 待會計審核</span>`;
+      }
+
+      // 此時 status === 'pending_payment'，檢查發票是否收到
+      if (!item.is_receipt_received) {
+        return `
+          <button disabled title="需先勾選發票已收到才可撥款" class="bg-gray-200 text-gray-400 text-xs px-2 py-1 rounded cursor-not-allowed border border-gray-300">
+            待收發票 (不可撥款)
+          </button>
+        `;
+      }
+
+      // 會計已審 + 發票已收 -> 解鎖按鈕
+      return `
+        <button onclick="confirmPayment('${item.id}')" class="bg-blue-600 text-white text-xs px-2 py-1 rounded hover:bg-blue-700 font-medium shadow-sm transition">
+          確認撥款
+        </button>
+      `;
+    }
+
+    // 更新發票收到狀態 (勾選核取方框時，自動更新畫面狀態)
+    async function toggleReceiptReceived(id, isChecked) {
+      const { error } = await supabaseClient.from('receipts').update({ is_receipt_received: isChecked }).eq('id', id);
+      if (error) {
+        alert(`更新發票收到狀態失敗: ${error.message}`);
+      } else {
+        loadAdminData(); // 重新整理以刷新出納按鈕啟用狀態
       }
     }
 
-    async function toggleReceiptReceived(id, isChecked) {
-      const { error } = await supabaseClient.from('receipts').update({ is_receipt_received: isChecked }).eq('id', id);
-      if (error) alert(`更新發票收到狀態失敗: ${error.message}`);
-    }
-
+    // 更新會計科目
     async function updateSubject(id, subject) {
       const { error } = await supabaseClient.from('receipts').update({ accounting_subject: subject }).eq('id', id);
       if (error) alert(`更新科目失敗: ${error.message}`);
     }
 
+    // 會計審核通過
     async function approveAudit(id) {
       const { error } = await supabaseClient.from('receipts').update({ 
         status: 'pending_payment',
@@ -185,16 +208,48 @@
       else loadAdminData();
     }
 
+    // 出納執行撥款 (雙重驗證防呆)
     async function confirmPayment(id) {
-      const { error } = await supabaseClient.from('receipts').update({ 
-        status: 'paid',
-        paid_at: new Date().toISOString()
-      }).eq('id', id);
+      try {
+        const { data: item, error: fetchError } = await supabaseClient
+          .from('receipts')
+          .select('status, is_receipt_received')
+          .eq('id', id)
+          .single();
 
-      if (error) alert(`操作失敗: ${error.message}`);
-      else loadAdminData();
+        if (fetchError) throw fetchError;
+
+        if (item.status !== 'pending_payment') {
+          alert('無法撥款：該筆請款尚未通過會計審核！');
+          return;
+        }
+
+        if (!item.is_receipt_received) {
+          alert('無法撥款：請先勾選「發票已收到」後再執行撥款！');
+          return;
+        }
+
+        if (!confirm('確認已完成轉帳/撥款操作？')) return;
+
+        const { error: updateError } = await supabaseClient
+          .from('receipts')
+          .update({ 
+            status: 'paid',
+            paid_at: new Date().toISOString()
+          })
+          .eq('id', id);
+
+        if (updateError) throw updateError;
+
+        alert('撥款成功！');
+        loadAdminData();
+
+      } catch (err) {
+        alert(`操作失敗：${err.message}`);
+      }
     }
 
+    // 退單操作
     async function rejectClaim(id) {
       const reason = prompt('請輸入退單原因：');
       if (reason === null) return;
