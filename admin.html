@@ -4,16 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>請款審核 - 管理後台</title>
-  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Supabase JS Client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="bg-gray-100 min-h-screen">
   <div class="max-w-7xl mx-auto py-8 px-4">
     <div class="flex justify-between items-center mb-6">
-      <h1 class="text-2xl font-bold text-gray-800">會計出納審核後台</h1>
-      <button onclick="loadAdminData()" class="bg-gray-200 text-gray-700 px-3 py-1 rounded hover:bg-gray-300 text-sm">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800">會計出納審核後台</h1>
+        <p class="text-xs text-gray-500 mt-1">獨立控管「會計審核」與「出納撥款」，即時連動申請人領款回覆</p>
+      </div>
+      <button onclick="loadAdminData()" class="bg-gray-200 text-gray-700 px-3 py-1.5 rounded hover:bg-gray-300 text-sm font-medium">
         🔄 重新整理
       </button>
     </div>
@@ -24,16 +25,17 @@
           <thead class="bg-gray-50">
             <tr>
               <th class="px-3 py-3 text-left font-medium text-gray-500">時間 / 申請人</th>
-              <th class="px-3 py-3 text-left font-medium text-gray-500">項目 / 憑證類別</th>
+              <th class="px-3 py-3 text-left font-medium text-gray-500">項目 / 發票與憑證檔</th>
               <th class="px-3 py-3 text-right font-medium text-gray-500">請款金額</th>
-              <th class="px-3 py-3 text-center font-medium text-gray-500">發票已收到</th>
+              <th class="px-3 py-3 text-center font-medium text-gray-500">發票收到</th>
               <th class="px-3 py-3 text-left font-medium text-gray-500">會計科目設定</th>
-              <th class="px-3 py-3 text-center font-medium text-gray-500">流程狀態</th>
-              <th class="px-3 py-3 text-center font-medium text-gray-500">操作動作</th>
+              <th class="px-3 py-3 text-center font-medium text-gray-500">流程狀態 / 收訖確認</th>
+              <th class="px-3 py-3 text-center font-medium text-gray-500">會計審核區</th>
+              <th class="px-3 py-3 text-center font-medium text-gray-500">出納撥款區</th>
             </tr>
           </thead>
           <tbody id="adminTableBody" class="divide-y divide-gray-200 bg-white">
-            <tr><td colspan="7" class="text-center py-6 text-gray-500">資料讀取中...</td></tr>
+            <tr><td colspan="8" class="text-center py-6 text-gray-500">資料讀取中...</td></tr>
           </tbody>
         </table>
       </div>
@@ -58,7 +60,7 @@
         if (error) throw error;
 
         if (!data || data.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="7" class="text-center py-6 text-gray-500">目前沒有需要處理的請款單</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="8" class="text-center py-6 text-gray-500">目前沒有需要處理的請款單</td></tr>';
           return;
         }
 
@@ -72,7 +74,9 @@
             <td class="px-3 py-3">
               <div class="text-gray-900 truncate max-w-xs">${item.description}</div>
               <div class="text-xs text-gray-500">發票: ${item.invoice_number || '無'} (${item.receipt_type})</div>
-              ${item.file_url ? `<a href="${item.file_url}" target="_blank" class="text-xs text-blue-600 hover:underline">查看附件</a>` : ''}
+              ${item.file_url 
+                ? `<a href="${item.file_url}" target="_blank" class="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline font-medium mt-1">📄 開啟憑證檔案</a>` 
+                : '<span class="text-xs text-gray-400">未上傳憑證</span>'}
             </td>
             <td class="px-3 py-3 text-right font-semibold text-gray-900">
               $${item.claim_amount}
@@ -80,7 +84,7 @@
             <td class="px-3 py-3 text-center">
               <input type="checkbox" ${item.is_receipt_received ? 'checked' : ''} 
                 onchange="toggleReceiptReceived('${item.id}', this.checked)"
-                class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500">
+                class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer">
             </td>
             <td class="px-3 py-3">
               <select onchange="updateSubject('${item.id}', this.value)" class="border rounded text-xs p-1 border-gray-300">
@@ -95,47 +99,69 @@
             <td class="px-3 py-3 text-center">
               ${getStatusBadge(item)}
             </td>
-            <td class="px-3 py-3 text-center space-x-1">
-              ${renderActionButtons(item)}
+            <!-- 會計審核按鈕區 -->
+            <td class="px-3 py-3 text-center whitespace-nowrap">
+              ${renderAccountantActions(item)}
+            </td>
+            <!-- 出納撥款按鈕區 -->
+            <td class="px-3 py-3 text-center whitespace-nowrap">
+              ${renderCashierActions(item)}
             </td>
           </tr>
         `).join('');
 
       } catch (err) {
         console.error('後台讀取失敗：', err);
-        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-red-500">資料讀取失敗：${err.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-red-500">資料讀取失敗：${err.message}</td></tr>`;
       }
     }
 
+    // 狀態 Badge：包含「申請人確認收訖」狀態
     function getStatusBadge(item) {
       if (item.status === 'paid') {
         if (item.is_payee_confirmed) {
-          return '<span class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">🎉 雙方已結案</span>';
+          return `<div><span class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded font-medium">🎉 雙方已結案</span><div class="text-[10px] text-purple-600 mt-1">申請人已確認收訖</div></div>`;
         } else {
-          return '<span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">已撥款 (待確認)</span>';
+          return `<div><span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">已撥款</span><div class="text-[10px] text-gray-500 mt-1">等候申請人收訖確認</div></div>`;
         }
       }
       
       const map = {
-        'pending_audit': '<span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">待審核</span>',
-        'pending_payment': '<span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">待撥款</span>',
-        'rejected': '<span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded">已退單</span>'
+        'pending_audit': '<span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">待會計審核</span>',
+        'pending_payment': '<span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">待出納撥款</span>',
+        'rejected': `<span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded" title="原因: ${item.reject_reason || ''}">已退單</span>`
       };
       return map[item.status] || item.status;
     }
 
-    function renderActionButtons(item) {
+    // 會計專用操作區
+    function renderAccountantActions(item) {
       if (item.status === 'pending_audit') {
         return `
-          <button onclick="approveAudit('${item.id}')" class="bg-green-600 text-white text-xs px-2 py-1 rounded hover:bg-green-700">會計審核通過</button>
-          <button onclick="rejectClaim('${item.id}')" class="bg-red-600 text-white text-xs px-2 py-1 rounded hover:bg-red-700">退單</button>
+          <div class="flex flex-col gap-1">
+            <button onclick="approveAudit('${item.id}')" class="bg-green-600 text-white text-xs px-2 py-1 rounded hover:bg-green-700">通過審核</button>
+            <button onclick="rejectClaim('${item.id}')" class="bg-red-600 text-white text-xs px-2 py-1 rounded hover:bg-red-700">退單</button>
+          </div>
         `;
-      } else if (item.status === 'pending_payment') {
-        return `
-          <button onclick="confirmPayment('${item.id}')" class="bg-blue-600 text-white text-xs px-2 py-1 rounded hover:bg-blue-700">出納確認撥款</button>
-        `;
+      } else if (item.status === 'rejected') {
+        return `<span class="text-xs text-red-500">已退單</span>`;
       } else {
-        return `<span class="text-xs text-gray-400">流程結束</span>`;
+        return `<span class="text-xs text-gray-400">已通過審核</span>`;
+      }
+    }
+
+    // 出納專用操作區
+    function renderCashierActions(item) {
+      if (item.status === 'pending_payment') {
+        return `
+          <button onclick="confirmPayment('${item.id}')" class="bg-blue-600 text-white text-xs px-2 py-1 rounded hover:bg-blue-700 font-medium">確認撥款</button>
+        `;
+      } else if (item.status === 'pending_audit') {
+        return `<span class="text-xs text-gray-400">等待會計審核</span>`;
+      } else if (item.status === 'rejected') {
+        return `<span class="text-xs text-gray-400">-</span>`;
+      } else {
+        return `<span class="text-xs text-green-600 font-medium">已完成撥款</span>`;
       }
     }
 
