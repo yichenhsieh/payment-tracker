@@ -4,13 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>費用請款 - 審核與出納後台</title>
-    <!-- 引入 Tailwind CSS v3 -->
+    <!-- Tailwind CSS v3 -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 引入 FontAwesome 圖示 -->
+    <!-- FontAwesome 圖示 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <!-- 引入 SweetAlert2 美化提示框 -->
+    <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <!-- 引入 Supabase JS SDK (全域會註冊一個 'supabase' 物件) -->
+    <!-- Supabase JS SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <script>
@@ -29,17 +29,11 @@
         }
     </script>
     <style>
-        /* 隱藏捲動條但保有功能 */
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-height-screen font-sans">
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans">
 
     <!-- 頂部導覽列 -->
     <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-40">
@@ -55,14 +49,9 @@
             </div>
             
             <div class="flex items-center gap-3">
-                <!-- 設定按鈕 -->
-                <button onclick="openConfigModal()" class="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-300 px-3.5 py-2 rounded-lg border border-slate-700 transition text-sm">
-                    <i class="fa-solid fa-gear"></i>
-                    <span>資料庫設定</span>
-                </button>
-                <!-- 重新整理按鈕 -->
-                <button onclick="fetchPayments()" class="bg-indigo-600 hover:bg-indigo-500 text-white p-2 rounded-lg transition" title="重新整理">
+                <button onclick="fetchPayments()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg transition flex items-center gap-2 text-sm font-semibold" title="重新整理">
                     <i class="fa-solid fa-rotate"></i>
+                    <span>同步資料</span>
                 </button>
             </div>
         </div>
@@ -147,7 +136,6 @@
                         </tr>
                     </thead>
                     <tbody id="payment-table-body" class="divide-y divide-slate-800/60 text-sm">
-                        <!-- 資料動態載入區 -->
                         <tr>
                             <td colspan="7" class="py-12 text-center text-slate-500">
                                 <i class="fa-solid fa-spinner fa-spin text-2xl mb-2 text-indigo-400"></i>
@@ -183,91 +171,37 @@
         </div>
     </div>
 
-    <!-- Supabase 設定設定彈窗 Modal -->
-    <div id="configModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-slate-900 border border-slate-800 rounded-xl max-w-md w-full overflow-hidden shadow-2xl">
-            <div class="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-850">
-                <div class="flex items-center gap-2">
-                    <i class="fa-solid fa-database text-indigo-400"></i>
-                    <h3 class="font-bold text-slate-100">Supabase 資料庫連線設定</h3>
-                </div>
-                <button onclick="closeConfigModal()" class="text-slate-400 hover:text-slate-200">
-                    <i class="fa-solid fa-xmark text-xl"></i>
-                </button>
-            </div>
-            <div class="p-6 space-y-4">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Supabase URL</label>
-                    <input type="text" id="configUrl" placeholder="https://xxxxxxxxxxxxxx.supabase.co" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3.5 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Supabase Anon Key</label>
-                    <input type="password" id="configKey" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3.5 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition">
-                </div>
-                <div class="p-3 bg-slate-850 rounded-lg border border-slate-800 text-xs text-slate-400 space-y-1">
-                    <p class="font-semibold text-slate-300">💡 安全提醒：</p>
-                    <p>1. 設定將被儲存在此瀏覽器的 LocalStorage 中，不經過第三方伺服器。</p>
-                    <p>2. 您也可以直接在 `admin.html` 原始碼最上方的 `DEFAULT_SUPABASE_` 常數中寫死您的金鑰。</p>
-                </div>
-            </div>
-            <div class="p-4 border-t border-slate-800 flex justify-end gap-2 bg-slate-850">
-                <button onclick="closeConfigModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-lg text-sm transition">
-                    取消
-                </button>
-                <button onclick="saveConfig()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2 rounded-lg text-sm transition font-medium">
-                    儲存並重新連線
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ========================================== JavaScript ========================================== -->
+    <!-- JavaScript -->
     <script>
-        // ⚙️ 預設 Supabase 設定 (若您不想每次都在網頁點齒輪，可以直接在這邊寫死填入您的金鑰)
         const DEFAULT_SUPABASE_URL = "https://yqyjngpsgdewanppclep.supabase.co"; 
         const DEFAULT_SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlxeWpuZ3BzZ2Rld2FucHBjbGVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMzMDIwODgsImV4cCI6MjA5ODg3ODA4OH0.CRigzLH0Qr8n-gpuJ_6v42BRM1SEXFPKX87GnPSM9BE";
 
-        // 全域變數定義
-        let supabaseClient = null; // 🟢 避免使用 const 宣告與全域 window.supabase 名稱衝突
+        let supabaseClient = null; 
         let allPayments = [];
         let currentFilter = 'all';
 
-        // 頁面初始化
         document.addEventListener("DOMContentLoaded", function() {
             initDatabaseConnection();
         });
 
-        // 初始化 Supabase 連線
         function initDatabaseConnection() {
-            const savedUrl = localStorage.getItem('supabase_url') || DEFAULT_SUPABASE_URL;
-            const savedKey = localStorage.getItem('supabase_key') || DEFAULT_SUPABASE_KEY;
-
-            // 檢查值是否有效 (不是預設中文字)
-            if (savedUrl && savedUrl !== "您的_SUPABASE_URL_貼在這邊" && savedKey && savedKey !== "您的_SUPABASE_ANON_KEY_貼在這邊") {
+            if (DEFAULT_SUPABASE_URL && DEFAULT_SUPABASE_KEY) {
                 try {
-                    // 使用引入的 SDK 的全域物件來建立連線
-                    supabaseClient = supabase.createClient(savedUrl, savedKey);
+                    supabaseClient = supabase.createClient(DEFAULT_SUPABASE_URL, DEFAULT_SUPABASE_KEY);
                     fetchPayments();
                 } catch (err) {
-                    showErrorAlert("資料庫連線初始化失敗，請檢查設定格式！");
+                    showErrorTable("資料庫連線初始化失敗，請確認憑證設定。");
                 }
             } else {
-                // 如果沒有設定，直接彈出設定視窗引導輸入
-                openConfigModal();
+                showErrorTable("尚未配置 Supabase 憑證！");
             }
         }
 
-        // 從資料庫抓取請款單
         async function fetchPayments() {
-            if (!supabaseClient) {
-                openConfigModal();
-                return;
-            }
-
+            if (!supabaseClient) return;
             renderLoadingState();
 
             try {
-                // 讀取 receipts 資料表，依照建立時間倒序排列
                 const { data, error } = await supabaseClient
                     .from('receipts')
                     .select('*')
@@ -285,26 +219,15 @@
             }
         }
 
-        // 🟢 核心防護別名：不管呼叫 fetchData 還是 fetchPayments 都能完美運行，防止 ReferenceError 
         window.fetchData = function() {
-            console.log("Safe alias 'fetchData()' invoked.");
             fetchPayments();
         };
 
-        // 計算並更新上方四大面板的數據
         function updateStats() {
-            const stats = {
-                Pending: 0,
-                Approved: 0,
-                Paid: 0,
-                Rejected: 0
-            };
-
+            const stats = { Pending: 0, Approved: 0, Paid: 0, Rejected: 0 };
             allPayments.forEach(p => {
                 const status = p.status || 'Pending';
-                if (stats[status] !== undefined) {
-                    stats[status]++;
-                }
+                if (stats[status] !== undefined) stats[status]++;
             });
 
             document.getElementById('stat-pending').innerText = stats.Pending;
@@ -313,17 +236,13 @@
             document.getElementById('stat-rejected').innerText = stats.Rejected;
         }
 
-        // 渲染列表內容
         function renderPayments() {
             const tbody = document.getElementById('payment-table-body');
             tbody.innerHTML = '';
 
-            // 篩選與搜尋
             const searchQuery = document.getElementById('searchInput').value.toLowerCase();
             const filtered = allPayments.filter(p => {
                 const statusMatch = currentFilter === 'all' || (p.status || 'Pending') === currentFilter;
-                
-                // 彈性搜尋多重欄位
                 const searchString = `${p.applicant_name || ''} ${p.payee_name || ''} ${p.email || ''} ${p.category || ''} ${p.purpose || ''}`.toLowerCase();
                 const searchMatch = searchString.includes(searchQuery);
 
@@ -346,17 +265,14 @@
                 const date = new Date(p.created_at).toLocaleDateString('zh-TW', {
                     year: 'numeric', month: '2-digit', day: '2-digit'
                 });
-                
                 tbody.appendChild(createTableRow(p, date));
             });
         }
 
-        // 產生一筆表格列 HTML
         function createTableRow(p, formattedDate) {
             const tr = document.createElement('tr');
             tr.className = "hover:bg-slate-850/30 transition-all border-b border-slate-850/60";
 
-            // 狀態顏色樣式
             let statusBadge = '';
             const status = p.status || 'Pending';
             if (status === 'Pending') {
@@ -369,14 +285,12 @@
                 statusBadge = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">退回</span>`;
             }
 
-            // 發票照片預覽按鈕
             const receiptHtml = p.receipt_url 
                 ? `<button onclick="viewReceipt('${p.receipt_url}')" class="text-indigo-400 hover:text-indigo-300 hover:underline inline-flex items-center gap-1">
                      <i class="fa-solid fa-receipt"></i> 查看憑證
                    </button>`
                 : `<span class="text-slate-600 italic">未上傳</span>`;
 
-            // 動態產生對應按鈕
             let actionsHtml = '';
             if (status === 'Pending') {
                 actionsHtml = `
@@ -408,29 +322,18 @@
                 <td class="py-4 px-6 text-center">${receiptHtml}</td>
                 <td class="py-4 px-6 text-center">${statusBadge}</td>
                 <td class="py-4 px-6 text-right">
-                    <div class="flex items-center justify-end gap-2">
-                        ${actionsHtml}
-                    </div>
+                    <div class="flex items-center justify-end gap-2">${actionsHtml}</div>
                 </td>
             `;
             return tr;
         }
 
-        // 修改請款狀態核心功能
         async function updateStatus(id, newStatus) {
             let confirmText = "確定要執行此操作？";
             let confirmBtnColor = "#6366f1";
-            
-            if (newStatus === 'Approved') {
-                confirmText = "核准此筆請款單？";
-                confirmBtnColor = "#10b981";
-            } else if (newStatus === 'Paid') {
-                confirmText = "確認此筆款項已撥款完成？";
-                confirmBtnColor = "#3b82f6";
-            } else if (newStatus === 'Rejected') {
-                confirmText = "確定退回這筆請款？";
-                confirmBtnColor = "#ef4444";
-            }
+            if (newStatus === 'Approved') { confirmText = "核准此筆請款單？"; confirmBtnColor = "#10b981"; }
+            else if (newStatus === 'Paid') { confirmText = "確認此筆款項已撥款完成？"; confirmBtnColor = "#3b82f6"; }
+            else if (newStatus === 'Rejected') { confirmText = "確定退回這筆請款？"; confirmBtnColor = "#ef4444"; }
 
             const { isConfirmed } = await Swal.fire({
                 title: '確認操作',
@@ -464,9 +367,7 @@
                     color: '#f8fafc'
                 });
 
-                // 重新載入列表
                 fetchPayments();
-
             } catch (err) {
                 Swal.fire({
                     title: '操作失敗',
@@ -478,33 +379,21 @@
             }
         }
 
-        // 搜尋處理
-        function searchPayments() {
-            renderPayments();
-        }
+        function searchPayments() { renderPayments(); }
 
-        // 狀態頁籤切換
         function filterStatus(status) {
             currentFilter = status;
-            
-            // 變更 CSS 頁籤焦點
             document.querySelectorAll('.status-tab').forEach(btn => {
                 btn.className = "status-tab px-4 py-2 rounded-lg text-sm font-semibold transition text-slate-400 hover:bg-slate-800 hover:text-slate-200";
             });
             event.target.className = "status-tab px-4 py-2 rounded-lg text-sm font-semibold transition bg-indigo-600 text-white";
-
             renderPayments();
         }
 
-        // 打開燈箱觀看發票
         function viewReceipt(url) {
             const modal = document.getElementById('receiptModal');
-            const img = document.getElementById('modalImage');
-            const downloadBtn = document.getElementById('downloadBtn');
-
-            img.src = url;
-            downloadBtn.href = url;
-
+            document.getElementById('modalImage').src = url;
+            document.getElementById('downloadBtn').href = url;
             modal.classList.remove('hidden');
         }
 
@@ -512,48 +401,8 @@
             document.getElementById('receiptModal').classList.add('hidden');
         }
 
-        // 設定控制相關
-        function openConfigModal() {
-            document.getElementById('configUrl').value = localStorage.getItem('supabase_url') || '';
-            document.getElementById('configKey').value = localStorage.getItem('supabase_key') || '';
-            document.getElementById('configModal').classList.remove('hidden');
-        }
-
-        function closeConfigModal() {
-            document.getElementById('configModal').classList.add('hidden');
-        }
-
-        function saveConfig() {
-            const url = document.getElementById('configUrl').value.trim();
-            const key = document.getElementById('configKey').value.trim();
-
-            if (!url || !key) {
-                showErrorAlert("請輸入完整的 URL 與 Anon Key！");
-                return;
-            }
-
-            localStorage.setItem('supabase_url', url);
-            localStorage.setItem('supabase_key', key);
-
-            closeConfigModal();
-
-            Swal.fire({
-                title: '設定已儲存',
-                text: '正在重新載入資料庫...',
-                icon: 'success',
-                timer: 1500,
-                showConfirmButton: false,
-                background: '#0f172a',
-                color: '#f8fafc'
-            });
-
-            initDatabaseConnection();
-        }
-
-        // UI 載入狀態輔助函數
         function renderLoadingState() {
-            const tbody = document.getElementById('payment-table-body');
-            tbody.innerHTML = `
+            document.getElementById('payment-table-body').innerHTML = `
                 <tr>
                     <td colspan="7" class="py-12 text-center text-slate-500">
                         <i class="fa-solid fa-spinner fa-spin text-2xl mb-2 text-indigo-400"></i>
@@ -564,30 +413,15 @@
         }
 
         function showErrorTable(msg) {
-            const tbody = document.getElementById('payment-table-body');
-            tbody.innerHTML = `
+            document.getElementById('payment-table-body').innerHTML = `
                 <tr>
                     <td colspan="7" class="py-12 text-center text-rose-400 bg-rose-500/5 border border-rose-500/20 rounded-b-xl">
                         <i class="fa-solid fa-triangle-exclamation text-3xl mb-2"></i>
-                        <p class="font-bold text-base">資料載入失敗</p>
+                        <p class="font-bold text-base">資料連線失敗</p>
                         <p class="text-xs text-slate-400 mt-1 max-w-md mx-auto">錯誤原因: ${msg}</p>
-                        <button onclick="openConfigModal()" class="mt-4 bg-rose-600 hover:bg-rose-500 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">
-                            <i class="fa-solid fa-gear mr-1"></i>檢查資料庫設定
-                        </button>
                     </td>
                 </tr>
             `;
-        }
-
-        // 錯誤彈出框
-        function showErrorAlert(msg) {
-            Swal.fire({
-                title: '設定有誤',
-                text: msg,
-                icon: 'warning',
-                background: '#0f172a',
-                color: '#f8fafc'
-            });
         }
     </script>
 </body>

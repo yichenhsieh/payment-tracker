@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>費用請款 - 審核與出納後台</title>
-    <!-- 引入 Tailwind CSS v3 -->
+    <title>費用請款 - 申請單填寫</title>
+    <!-- Tailwind CSS v3 -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 引入 FontAwesome 圖示 -->
+    <!-- FontAwesome 圖示 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <!-- 引入 SweetAlert2 美化提示框 -->
+    <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <!-- 引入 Supabase JS SDK (全域會註冊一個 'supabase' 物件) -->
+    <!-- Supabase JS SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <script>
@@ -28,468 +28,188 @@
             }
         }
     </script>
-    <style>
-        /* 隱藏捲動條但保有功能 */
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-    </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-height-screen font-sans">
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans flex flex-col justify-between">
 
-    <!-- 頂部導覽列 -->
+    <!-- 頂部 Header -->
     <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-40">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <div class="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
             <div class="flex items-center gap-3">
                 <div class="bg-indigo-600/20 p-2 rounded-lg border border-indigo-500/30">
-                    <i class="fa-solid fa-vault text-indigo-400 text-xl"></i>
+                    <i class="fa-solid fa-file-invoice-dollar text-indigo-400 text-xl"></i>
                 </div>
                 <div>
                     <h1 class="text-lg font-bold tracking-wider">PAYMENT TRACKER</h1>
-                    <p class="text-xs text-slate-400">審核與出納管理後台</p>
+                    <p class="text-xs text-slate-400">線上費用請款申請</p>
                 </div>
             </div>
-            
-            <div class="flex items-center gap-3">
-                <!-- 重新整理按鈕 -->
-                <button onclick="fetchPayments()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg transition flex items-center gap-2 text-sm font-semibold" title="重新整理">
-                    <i class="fa-solid fa-rotate"></i>
-                    <span>同步資料</span>
-                </button>
-            </div>
+            <a href="admin.html" class="text-xs text-slate-400 hover:text-indigo-400 transition flex items-center gap-1">
+                <i class="fa-solid fa-user-shield"></i> 管理後台
+            </a>
         </div>
     </header>
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
-        <!-- 數據統計區塊 -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <div class="bg-slate-900 p-5 rounded-xl border border-slate-800 flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-semibold tracking-wider text-slate-400 uppercase">待審核</p>
-                    <p id="stat-pending" class="text-3xl font-bold text-amber-400 mt-1">0</p>
-                </div>
-                <div class="bg-amber-500/10 p-3 rounded-lg border border-amber-500/20">
-                    <i class="fa-solid fa-clock text-amber-400 text-xl"></i>
-                </div>
-            </div>
-            
-            <div class="bg-slate-900 p-5 rounded-xl border border-slate-800 flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-semibold tracking-wider text-slate-400 uppercase">已核准 (待撥款)</p>
-                    <p id="stat-approved" class="text-3xl font-bold text-emerald-400 mt-1">0</p>
-                </div>
-                <div class="bg-emerald-500/10 p-3 rounded-lg border border-emerald-500/20">
-                    <i class="fa-solid fa-circle-check text-emerald-400 text-xl"></i>
-                </div>
-            </div>
-            
-            <div class="bg-slate-900 p-5 rounded-xl border border-slate-800 flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-semibold tracking-wider text-slate-400 uppercase">已撥款</p>
-                    <p id="stat-paid" class="text-3xl font-bold text-blue-400 mt-1">0</p>
-                </div>
-                <div class="bg-blue-500/10 p-3 rounded-lg border border-blue-500/20">
-                    <i class="fa-solid fa-hand-holding-dollar text-blue-400 text-xl"></i>
-                </div>
+    <!-- 主要表單區塊 -->
+    <main class="max-w-2xl mx-auto w-full px-4 py-8 flex-grow">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-2xl">
+            <div class="border-b border-slate-800 pb-4 mb-6">
+                <h2 class="text-xl font-bold text-slate-100">填寫請款資料</h2>
+                <p class="text-xs text-slate-400 mt-1">請確實填寫帶有 <span class="text-rose-500">*</span> 的必填欄位，並附上清晰的發票憑證。</p>
             </div>
 
-            <div class="bg-slate-900 p-5 rounded-xl border border-slate-800 flex items-center justify-between">
+            <form id="paymentForm" onsubmit="handleFormSubmit(event)" class="space-y-5">
+                <!-- 申請人與通知 Email -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">申請人姓名 <span class="text-rose-500">*</span></label>
+                        <input type="text" id="applicant_name" required placeholder="請輸入姓名" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">通知 Email <span class="text-rose-500">*</span></label>
+                        <input type="email" id="email" required placeholder="example@domain.com" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition">
+                    </div>
+                </div>
+
+                <!-- 收款人與請款金額 -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">收款人 / 戶名 <span class="text-rose-500">*</span></label>
+                        <input type="text" id="payee_name" required placeholder="若同申請人請重複填寫" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">請款金額 (TWD) <span class="text-rose-500">*</span></label>
+                        <input type="number" id="amount" min="1" required placeholder="0" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 font-mono transition">
+                    </div>
+                </div>
+
+                <!-- 費用類別 -->
                 <div>
-                    <p class="text-xs font-semibold tracking-wider text-slate-400 uppercase">不通過</p>
-                    <p id="stat-rejected" class="text-3xl font-bold text-rose-400 mt-1">0</p>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">費用類別 <span class="text-rose-500">*</span></label>
+                    <select id="category" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition">
+                        <option value="行政雜支">行政雜支</option>
+                        <option value="差旅交通">差旅交通</option>
+                        <option value="餐飲聚會">餐飲聚會</option>
+                        <option value="設備耗材">設備耗材</option>
+                        <option value="行銷推廣">行銷推廣</option>
+                        <option value="其他費用">其他費用</option>
+                    </select>
                 </div>
-                <div class="bg-rose-500/10 p-3 rounded-lg border border-rose-500/20">
-                    <i class="fa-solid fa-circle-xmark text-rose-400 text-xl"></i>
+
+                <!-- 請款用途說明 -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">請款用途說明 <span class="text-rose-500">*</span></label>
+                    <textarea id="purpose" rows="3" required placeholder="請詳細說明費用產生的原因與用途..." class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition"></textarea>
                 </div>
-            </div>
-        </div>
 
-        <!-- 篩選與搜尋欄 -->
-        <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 mb-6 flex flex-col md:flex-row gap-4 items-center justify-between">
-            <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
-                <button onclick="filterStatus('all')" class="status-tab px-4 py-2 rounded-lg text-sm font-semibold transition bg-indigo-600 text-white">全部</button>
-                <button onclick="filterStatus('Pending')" class="status-tab px-4 py-2 rounded-lg text-sm font-semibold transition text-slate-400 hover:bg-slate-800 hover:text-slate-200">待審核</button>
-                <button onclick="filterStatus('Approved')" class="status-tab px-4 py-2 rounded-lg text-sm font-semibold transition text-slate-400 hover:bg-slate-800 hover:text-slate-200">已核准</button>
-                <button onclick="filterStatus('Paid')" class="status-tab px-4 py-2 rounded-lg text-sm font-semibold transition text-slate-400 hover:bg-slate-800 hover:text-slate-200">已撥款</button>
-                <button onclick="filterStatus('Rejected')" class="status-tab px-4 py-2 rounded-lg text-sm font-semibold transition text-slate-400 hover:bg-slate-800 hover:text-slate-200">退回</button>
-            </div>
-            
-            <div class="relative w-full md:w-72">
-                <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-500">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                </span>
-                <input type="text" id="searchInput" oninput="searchPayments()" placeholder="搜尋申請人、收款人..." class="w-full bg-slate-950 border border-slate-700 rounded-lg py-2 pl-10 pr-4 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition">
-            </div>
-        </div>
+                <!-- 上傳發票憑證 -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">發票 / 收據憑證圖檔 <span class="text-rose-500">*</span></label>
+                    <input type="file" id="receipt_file" accept="image/*" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3.5 py-2 text-sm text-slate-400 file:mr-4 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500 cursor-pointer transition">
+                    <p class="text-[11px] text-slate-500 mt-1">支援 JPG、PNG 格式，檔案大小請小於 5MB。</p>
+                </div>
 
-        <!-- 請款單列表區 -->
-        <div class="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden shadow-2xl">
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="border-b border-slate-800 bg-slate-850/50 text-slate-400 text-xs font-semibold uppercase tracking-wider">
-                            <th class="py-4 px-6">申請日期</th>
-                            <th class="py-4 px-6">請款對象</th>
-                            <th class="py-4 px-6">用途/類別</th>
-                            <th class="py-4 px-6 text-right">金額</th>
-                            <th class="py-4 px-6 text-center">發票憑證</th>
-                            <th class="py-4 px-6 text-center">狀態</th>
-                            <th class="py-4 px-6 text-right">操作管理</th>
-                        </tr>
-                    </thead>
-                    <tbody id="payment-table-body" class="divide-y divide-slate-800/60 text-sm">
-                        <!-- 資料動態載入區 -->
-                        <tr>
-                            <td colspan="7" class="py-12 text-center text-slate-500">
-                                <i class="fa-solid fa-spinner fa-spin text-2xl mb-2 text-indigo-400"></i>
-                                <p>正在連線至資料庫，載入請款項目中...</p>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+                <!-- 送出按鈕 -->
+                <div class="pt-4">
+                    <button type="submit" id="submitBtn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-3 rounded-xl font-bold tracking-wide transition shadow-lg flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-paper-plane"></i>
+                        <span>提交請款申請</span>
+                    </button>
+                </div>
+            </form>
         </div>
     </main>
 
-    <!-- 發票憑證燈箱 Modal -->
-    <div id="receiptModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-slate-900 border border-slate-800 rounded-xl max-w-2xl w-full overflow-hidden shadow-2xl relative">
-            <div class="p-4 border-b border-slate-800 flex items-center justify-between">
-                <h3 class="font-bold text-slate-200">發票憑證預覽</h3>
-                <button onclick="closeReceiptModal()" class="text-slate-400 hover:text-slate-200 p-1">
-                    <i class="fa-solid fa-xmark text-xl"></i>
-                </button>
-            </div>
-            <div class="p-6 flex justify-center bg-slate-950">
-                <img id="modalImage" src="" alt="發票憑證" class="max-h-[500px] object-contain rounded-lg shadow">
-            </div>
-            <div class="p-4 border-t border-slate-800 flex justify-end gap-2">
-                <a id="downloadBtn" href="" target="_blank" download class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-2 rounded-lg text-sm transition font-medium">
-                    <i class="fa-solid fa-download mr-1.5"></i>在新分頁開啟
-                </a>
-                <button onclick="closeReceiptModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2 rounded-lg text-sm transition font-medium">
-                    關閉
-                </button>
-            </div>
-        </div>
-    </div>
+    <footer class="text-center py-4 text-xs text-slate-600">
+        &copy; PAYMENT TRACKER SYSTEM
+    </footer>
 
-    <!-- ========================================== JavaScript ========================================== -->
+    <!-- JavaScript -->
     <script>
-        // ⚙️ 寫死的 Supabase 連線設定
-        const DEFAULT_SUPABASE_URL = "https://yqyjngpsgdewanppclep.supabase.co"; 
-        const DEFAULT_SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlxeWpuZ3BzZ2Rld2FucHBjbGVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMzMDIwODgsImV4cCI6MjA5ODg3ODA4OH0.CRigzLH0Qr8n-gpuJ_6v42BRM1SEXFPKX87GnPSM9BE";
+        const SUPABASE_URL = "https://yqyjngpsgdewanppclep.supabase.co"; 
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlxeWpuZ3BzZ2Rld2FucHBjbGVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMzMDIwODgsImV4cCI6MjA5ODg3ODA4OH0.CRigzLH0Qr8n-gpuJ_6v42BRM1SEXFPKX87GnPSM9BE";
 
-        // 全域變數定義
-        let supabaseClient = null; 
-        let allPayments = [];
-        let currentFilter = 'all';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // 頁面初始化
-        document.addEventListener("DOMContentLoaded", function() {
-            initDatabaseConnection();
-        });
-
-        // 初始化 Supabase 連線
-        function initDatabaseConnection() {
-            if (DEFAULT_SUPABASE_URL && DEFAULT_SUPABASE_KEY) {
-                try {
-                    // 直接使用寫死的金鑰建立連線
-                    supabaseClient = supabase.createClient(DEFAULT_SUPABASE_URL, DEFAULT_SUPABASE_KEY);
-                    fetchPayments();
-                } catch (err) {
-                    showErrorTable("資料庫連線初始化失敗，請確認程式碼中的 URL 與 Key 是否正確。");
-                }
-            } else {
-                showErrorTable("尚未配置 Supabase 憑證！");
-            }
-        }
-
-        // 從資料庫抓取請款單
-        async function fetchPayments() {
-            if (!supabaseClient) {
-                showErrorTable("資料庫連線尚未初始化！");
-                return;
-            }
-
-            renderLoadingState();
-
-            try {
-                // 讀取 receipts 資料表，依照建立時間倒序排列
-                const { data, error } = await supabaseClient
-                    .from('receipts')
-                    .select('*')
-                    .order('created_at', { ascending: false });
-
-                if (error) throw error;
-
-                allPayments = data || [];
-                updateStats();
-                renderPayments();
-
-            } catch (err) {
-                console.error("Fetch error:", err);
-                showErrorTable(err.message);
-            }
-        }
-
-        // 🟢 核心防護別名
-        window.fetchData = function() {
-            console.log("Safe alias 'fetchData()' invoked.");
-            fetchPayments();
-        };
-
-        // 計算並更新上方四大面板的數據
-        function updateStats() {
-            const stats = {
-                Pending: 0,
-                Approved: 0,
-                Paid: 0,
-                Rejected: 0
-            };
-
-            allPayments.forEach(p => {
-                const status = p.status || 'Pending';
-                if (stats[status] !== undefined) {
-                    stats[status]++;
-                }
-            });
-
-            document.getElementById('stat-pending').innerText = stats.Pending;
-            document.getElementById('stat-approved').innerText = stats.Approved;
-            document.getElementById('stat-paid').innerText = stats.Paid;
-            document.getElementById('stat-rejected').innerText = stats.Rejected;
-        }
-
-        // 渲染列表內容
-        function renderPayments() {
-            const tbody = document.getElementById('payment-table-body');
-            tbody.innerHTML = '';
-
-            // 篩選與搜尋
-            const searchQuery = document.getElementById('searchInput').value.toLowerCase();
-            const filtered = allPayments.filter(p => {
-                const statusMatch = currentFilter === 'all' || (p.status || 'Pending') === currentFilter;
-                
-                // 彈性搜尋多重欄位
-                const searchString = `${p.applicant_name || ''} ${p.payee_name || ''} ${p.email || ''} ${p.category || ''} ${p.purpose || ''}`.toLowerCase();
-                const searchMatch = searchString.includes(searchQuery);
-
-                return statusMatch && searchMatch;
-            });
-
-            if (filtered.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="7" class="py-12 text-center text-slate-500">
-                            <i class="fa-solid fa-folder-open text-2xl mb-2 block text-slate-600"></i>
-                            目前沒有符合條件的請款項目。
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-
-            filtered.forEach(p => {
-                const date = new Date(p.created_at).toLocaleDateString('zh-TW', {
-                    year: 'numeric', month: '2-digit', day: '2-digit'
-                });
-                
-                tbody.appendChild(createTableRow(p, date));
-            });
-        }
-
-        // 產生一筆表格列 HTML
-        function createTableRow(p, formattedDate) {
-            const tr = document.createElement('tr');
-            tr.className = "hover:bg-slate-850/30 transition-all border-b border-slate-850/60";
-
-            // 狀態顏色樣式
-            let statusBadge = '';
-            const status = p.status || 'Pending';
-            if (status === 'Pending') {
-                statusBadge = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20"><span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>待審核</span>`;
-            } else if (status === 'Approved') {
-                statusBadge = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">已核准</span>`;
-            } else if (status === 'Paid') {
-                statusBadge = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20">已撥款</span>`;
-            } else {
-                statusBadge = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">退回</span>`;
-            }
-
-            // 發票照片預覽按鈕
-            const receiptHtml = p.receipt_url 
-                ? `<button onclick="viewReceipt('${p.receipt_url}')" class="text-indigo-400 hover:text-indigo-300 hover:underline inline-flex items-center gap-1">
-                     <i class="fa-solid fa-receipt"></i> 查看憑證
-                   </button>`
-                : `<span class="text-slate-600 italic">未上傳</span>`;
-
-            // 動態產生對應按鈕
-            let actionsHtml = '';
-            if (status === 'Pending') {
-                actionsHtml = `
-                    <button onclick="updateStatus('${p.id}', 'Approved')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition shadow-md">核准</button>
-                    <button onclick="updateStatus('${p.id}', 'Rejected')" class="bg-slate-800 hover:bg-rose-950/40 hover:text-rose-400 text-slate-400 px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-700 transition">退回</button>
-                `;
-            } else if (status === 'Approved') {
-                actionsHtml = `
-                    <button onclick="updateStatus('${p.id}', 'Paid')" class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition shadow-md">標記撥款</button>
-                    <button onclick="updateStatus('${p.id}', 'Pending')" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-700 transition">重設</button>
-                `;
-            } else {
-                actionsHtml = `
-                    <button onclick="updateStatus('${p.id}', 'Pending')" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-700 transition">回復待審</button>
-                `;
-            }
-
-            tr.innerHTML = `
-                <td class="py-4 px-6 text-slate-400 font-mono">${formattedDate}</td>
-                <td class="py-4 px-6">
-                    <div class="font-bold text-slate-200">${p.applicant_name || '未填'}</div>
-                    <div class="text-xs text-slate-500 mt-0.5"><span class="text-slate-600">匯至:</span> ${p.payee_name || '同申請人'}</div>
-                </td>
-                <td class="py-4 px-6">
-                    <div class="text-slate-300">${p.purpose || '未填'}</div>
-                    <div class="text-xs text-indigo-400 mt-0.5 font-medium">${p.category || '一般報支'}</div>
-                </td>
-                <td class="py-4 px-6 text-right font-semibold font-mono text-indigo-300 text-base">$${Number(p.amount || 0).toLocaleString()}</td>
-                <td class="py-4 px-6 text-center">${receiptHtml}</td>
-                <td class="py-4 px-6 text-center">${statusBadge}</td>
-                <td class="py-4 px-6 text-right">
-                    <div class="flex items-center justify-end gap-2">
-                        ${actionsHtml}
-                    </div>
-                </td>
-            `;
-            return tr;
-        }
-
-        // 修改請款狀態核心功能
-        async function updateStatus(id, newStatus) {
-            let confirmText = "確定要執行此操作？";
-            let confirmBtnColor = "#6366f1";
+        async function handleFormSubmit(event) {
+            event.preventDefault();
             
-            if (newStatus === 'Approved') {
-                confirmText = "核准此筆請款單？";
-                confirmBtnColor = "#10b981";
-            } else if (newStatus === 'Paid') {
-                confirmText = "確認此筆款項已撥款完成？";
-                confirmBtnColor = "#3b82f6";
-            } else if (newStatus === 'Rejected') {
-                confirmText = "確定退回這筆請款？";
-                confirmBtnColor = "#ef4444";
-            }
-
-            const { isConfirmed } = await Swal.fire({
-                title: '確認操作',
-                text: confirmText,
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonColor: confirmBtnColor,
-                cancelButtonColor: '#334155',
-                confirmButtonText: '確定',
-                cancelButtonText: '取消',
-                background: '#0f172a',
-                color: '#f8fafc'
-            });
-
-            if (!isConfirmed) return;
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> 處理上傳中...`;
 
             try {
-                const { error } = await supabaseClient
+                const fileInput = document.getElementById('receipt_file');
+                const file = fileInput.files[0];
+
+                if (!file) {
+                    throw new Error("請先選擇發票憑證圖檔！");
+                }
+
+                // 檔案大小限制 (5MB)
+                if (file.size > 5 * 1024 * 1024) {
+                    throw new Error("圖檔大小超過 5MB 限制，請先壓縮圖片！");
+                }
+
+                // 1. 上傳照片至 Supabase Storage (receipts bucket)
+                const fileExt = file.name.split('.').pop();
+                const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+                
+                const { data: uploadData, error: uploadError } = await supabaseClient.storage
                     .from('receipts')
-                    .update({ status: newStatus })
-                    .eq('id', id);
+                    .upload(fileName, file);
 
-                if (error) throw error;
+                if (uploadError) throw new Error("圖檔上傳失敗: " + uploadError.message);
 
-                Swal.fire({
-                    title: '更新成功！',
+                // 取得圖檔公開 URL
+                const { data: urlData } = supabaseClient.storage
+                    .from('receipts')
+                    .getPublicUrl(fileName);
+
+                const publicUrl = urlData.publicUrl;
+
+                // 2. 新增請款紀錄至 Supabase DB
+                const payload = {
+                    applicant_name: document.getElementById('applicant_name').value.trim(),
+                    email: document.getElementById('email').value.trim(),
+                    payee_name: document.getElementById('payee_name').value.trim(),
+                    amount: parseFloat(document.getElementById('amount').value),
+                    category: document.getElementById('category').value,
+                    purpose: document.getElementById('purpose').value.trim(),
+                    receipt_url: publicUrl,
+                    status: 'Pending'
+                };
+
+                const { error: insertError } = await supabaseClient
+                    .from('receipts')
+                    .insert([payload]);
+
+                if (insertError) throw new Error("資料寫入失敗: " + insertError.message);
+
+                // 3. 成功提示與重置表單
+                await Swal.fire({
+                    title: '請款單已送出！',
+                    text: '您的請款申請已成功提交，待管理員審核。',
                     icon: 'success',
-                    timer: 1000,
-                    showConfirmButton: false,
                     background: '#0f172a',
-                    color: '#f8fafc'
+                    color: '#f8fafc',
+                    confirmButtonColor: '#6366f1'
                 });
 
-                // 重新載入列表
-                fetchPayments();
+                document.getElementById('paymentForm').reset();
 
             } catch (err) {
                 Swal.fire({
-                    title: '操作失敗',
+                    title: '送出失敗',
                     text: err.message,
                     icon: 'error',
                     background: '#0f172a',
-                    color: '#f8fafc'
+                    color: '#f8fafc',
+                    confirmButtonColor: '#ef4444'
                 });
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> <span>提交請款申請</span>`;
             }
-        }
-
-        // 搜尋處理
-        function searchPayments() {
-            renderPayments();
-        }
-
-        // 狀態頁籤切換
-        function filterStatus(status) {
-            currentFilter = status;
-            
-            // 變更 CSS 頁籤焦點
-            document.querySelectorAll('.status-tab').forEach(btn => {
-                btn.className = "status-tab px-4 py-2 rounded-lg text-sm font-semibold transition text-slate-400 hover:bg-slate-800 hover:text-slate-200";
-            });
-            event.target.className = "status-tab px-4 py-2 rounded-lg text-sm font-semibold transition bg-indigo-600 text-white";
-
-            renderPayments();
-        }
-
-        // 打開燈箱觀看發票
-        function viewReceipt(url) {
-            const modal = document.getElementById('receiptModal');
-            const img = document.getElementById('modalImage');
-            const downloadBtn = document.getElementById('downloadBtn');
-
-            img.src = url;
-            downloadBtn.href = url;
-
-            modal.classList.remove('hidden');
-        }
-
-        function closeReceiptModal() {
-            document.getElementById('receiptModal').classList.add('hidden');
-        }
-
-        // UI 載入狀態輔助函數
-        function renderLoadingState() {
-            const tbody = document.getElementById('payment-table-body');
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="7" class="py-12 text-center text-slate-500">
-                        <i class="fa-solid fa-spinner fa-spin text-2xl mb-2 text-indigo-400"></i>
-                        <p>更新資料中...</p>
-                    </td>
-                </tr>
-            `;
-        }
-
-        // 錯誤表格狀態
-        function showErrorTable(msg) {
-            const tbody = document.getElementById('payment-table-body');
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="7" class="py-12 text-center text-rose-400 bg-rose-500/5 border border-rose-500/20 rounded-b-xl">
-                        <i class="fa-solid fa-triangle-exclamation text-3xl mb-2"></i>
-                        <p class="font-bold text-base">資料連線失敗</p>
-                        <p class="text-xs text-slate-400 mt-1 max-w-md mx-auto">錯誤原因: ${msg}</p>
-                    </td>
-                </tr>
-            `;
         }
     </script>
 </body>
